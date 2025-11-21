@@ -21,7 +21,7 @@ class RestaurantRecord(BaseModel):
 class RawRestaurantRow(BaseModel):
     google_id: str = Field(alias="Google ID")
     name: str = Field(alias="Name")
-    full_address: Optional[str] = Field(alias="Full address", default=None)
+    full_address: str = Field(alias="Full address")
     is_closed: bool = Field(alias="Is closed")
     description_1: Optional[str] = Field(alias="Description 1", default=None)
     main_type: Optional[str] = Field(alias="Main type", default=None)

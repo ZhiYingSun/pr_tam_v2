@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 def _to_restaurant(row: RawRestaurantRow) -> RestaurantRecord:
     return RestaurantRecord(
         name=row.name,
-        address=(row.full_address or "").strip(),
+        address=row.full_address,
         city=row.city,
         postal_code=row.postal_code,
         coordinates=(row.longitude, row.latitude),
