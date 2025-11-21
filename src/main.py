@@ -5,7 +5,7 @@ from src.clients.openai_client import OpenAIClient
 from src.clients.zyte_client import ZyteClient
 from src.core.config import load_config
 from src.filter.filter_service import FilterService
-from src.ingest.csv_loader import load_restaurants_from_csv
+from src.loader.csv_loader import load_restaurants_from_csv
 from src.matcher.matcher import RestaurantMatcher
 from src.searcher.searcher import RestaurantSearcher
 

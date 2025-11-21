@@ -11,19 +11,19 @@ from src.core.models import RestaurantRecord, RawRestaurantRow
 
 logger = logging.getLogger(__name__)
 
-def _to_restaurant(raw: RawRestaurantRow) -> RestaurantRecord:
+def _to_restaurant(row: RawRestaurantRow) -> RestaurantRecord:
     return RestaurantRecord(
-        name=raw.name,
-        address=(raw.full_address or "").strip(),
-        city=(raw.city or "").strip(),
-        postal_code=(raw.postal_code or "").strip(),
-        coordinates=(raw.longitude, raw.latitude),
-        rating=raw.reviews_rating,
-        reviews_count=raw.reviews_count,
-        google_id=raw.google_id,
-        phone=raw.phone,
-        website=(raw.website or "").strip() or None,
-        main_type=(raw.main_type or "").strip() or None,
+        name=row.name,
+        address=(row.full_address or "").strip(),
+        city=row.city,
+        postal_code=row.postal_code,
+        coordinates=(row.longitude, row.latitude),
+        rating=row.reviews_rating,
+        reviews_count=row.reviews_count,
+        google_id=row.google_id,
+        phone=row.phone,
+        website=(row.website or "").strip() or None,
+        main_type=(row.main_type or "").strip() or None,
     )
 
 
