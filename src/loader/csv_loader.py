@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
-from typing import Iterator, Union
+from typing import Iterator, Union, Optional
 
 import pandas as pd
 from pydantic import ValidationError
@@ -10,7 +10,6 @@ from pydantic import ValidationError
 from src.core.models import RestaurantRecord, RawRestaurantRow
 
 logger = logging.getLogger(__name__)
-
 
 def _to_restaurant(raw: RawRestaurantRow) -> RestaurantRecord:
     return RestaurantRecord(
@@ -61,7 +60,7 @@ def stream_restaurants_from_csv(
                 logger.debug(f"Skipping row {rows_read} due to validation error: {exc}")
             except Exception as exc:
                 skipped += 1
-                logger.warning(f"Error converting row {rows_read}: {exc}}")
+                logger.warning(f"Error converting row {rows_read}: {exc}")
 
     logger.info(
         f"CSV load finished. rows={rows_read} loaded={loaded} skipped={skipped}"

@@ -6,15 +6,16 @@ from pydantic import BaseModel, Field
 class RestaurantRecord(BaseModel):
     name: str
     address: str
+    phone: str
     city: str
     postal_code: str
     coordinates: Tuple[float, float]
-    rating: float
 
     google_id: str
-    phone: str
-    website: Optional[str] = None
+    rating: float
     reviews_count: int
+
+    website: Optional[str] = None
     main_type: Optional[str] = None
 
 class RawRestaurantRow(BaseModel):
@@ -27,12 +28,12 @@ class RawRestaurantRow(BaseModel):
     all_types: Optional[str] = Field(alias="All types", default=None)
     website: Optional[str] = Field(alias="Website", default=None)
     website_root: Optional[str] = Field(alias="Website (root url)", default=None)
-    phone: str = Field(alias="Phone", default=None)
+    phone: str = Field(alias="Phone")
     phone_international: Optional[str] = Field(alias="Phone international", default=None)
     borough: Optional[str] = Field(alias="Borough", default=None)
     street: Optional[str] = Field(alias="Street", default=None)
-    city: Optional[str] = Field(alias="City", default=None)
-    postal_code: Optional[str] = Field(alias="Postal code", default=None)
+    city: str = Field(alias="City")
+    postal_code: str = Field(alias="Postal code")
     state: Optional[str] = Field(alias="State", default=None)
     country: Optional[str] = Field(alias="Country", default=None)
     country_code: Optional[str] = Field(alias="Country code", default=None)
@@ -40,7 +41,7 @@ class RawRestaurantRow(BaseModel):
     latitude: float = Field(alias="Latitude")
     link: Optional[str] = Field(alias="Link", default=None)
     first_seen_on: Optional[str] = Field(alias="First seen on", default=None)
-    reviews_count: Optional[int] = Field(alias="Reviews count", default=None)
+    reviews_count: int = Field(alias="Reviews count")
     reviews_rating: float = Field(alias="Reviews rating")
     reviews_per_score: Optional[str] = Field(alias="Reviews per score", default=None)
     photos_count: Optional[int] = Field(alias="Photos count", default=None)
