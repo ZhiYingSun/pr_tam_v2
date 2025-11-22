@@ -10,14 +10,8 @@ from src.core.models import RestaurantRecord
 
 logger = logging.getLogger(__name__)
 
-@dataclass(frozen=True)
-class FilterConfig:
-    inclusion_list_path: Union[Path, None] = None
-    exclusion_list_path: Union[Path, None] = None
-    include_inactive: bool = False
-
 class FilterResult:
-    name: str
+    name: list[str]
     processed: int = 0
     passed: int = 0
     removed: int = 0
@@ -28,6 +22,7 @@ class BusinessFilter(Protocol):
         ...
 
 
+# TODO: add filter result data into return tuple
 def apply_all_filters(restaurants: Iterable[RestaurantRecord], filters: Iterable[BusinessFilter]) -> Iterator[
     RestaurantRecord]:
     for record in restaurants:
