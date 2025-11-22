@@ -31,6 +31,7 @@ def test_stream_restaurants_from_csv_reads_all_rows() -> None:
     assert first.reviews_count == 702
     assert first.main_type == "Tapas restaurant"
     assert first.is_closed == False
+    assert first.all_types ==  ['Carvery','Cocktail bar','Seafood restaurant','Spanish restaurant','Steak house','Tapas restaurant','Wine bar',]
 
 
 def test_load_restaurants_from_csv_returns_list() -> None:
@@ -52,3 +53,4 @@ def test_load_restaurants_from_csv_returns_list() -> None:
     assert first.rating == 4.1
     assert first.reviews_count == 702
     assert first.is_closed == False
+    assert first.all_types ==  ['Carvery','Cocktail bar','Seafood restaurant','Spanish restaurant','Steak house','Tapas restaurant','Wine bar',]
