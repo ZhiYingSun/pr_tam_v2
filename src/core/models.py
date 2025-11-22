@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from typing import Optional, Tuple, List, Dict, Any
-from pydantic import BaseModel, Field
+from typing import Optional, Tuple, List, Dict, Any, Union
+from pydantic import BaseModel, Field, field_validator
 
 class RestaurantRecord(BaseModel):
     name: str
@@ -50,3 +50,11 @@ class RawRestaurantRow(BaseModel):
     photo_1: Optional[str] = Field(alias="Photo 1", default=None)
     photo_2: Optional[str] = Field(alias="Photo 2", default=None)
     all_photos: Optional[str] = Field(alias="All photos", default=None)
+
+    @field_validator("all_types", mode="before")
+    def parse_all_types(cls, value: Union[list[str], str]) -> list[str]:
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            return [t.strip() for t in value.split(",") if t.strip()]
+        return []
