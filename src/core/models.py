@@ -12,11 +12,13 @@ class RestaurantRecord(BaseModel):
     coordinates: Tuple[float, float]
 
     google_id: str
+    is_closed: bool
     rating: float
     reviews_count: int
 
     website: Optional[str] = None
     main_type: Optional[str] = None
+    all_types: list[str]
 
 class RawRestaurantRow(BaseModel):
     google_id: str = Field(alias="Google ID")
@@ -25,7 +27,7 @@ class RawRestaurantRow(BaseModel):
     is_closed: bool = Field(alias="Is closed")
     description_1: Optional[str] = Field(alias="Description 1", default=None)
     main_type: Optional[str] = Field(alias="Main type", default=None)
-    all_types: Optional[str] = Field(alias="All types", default=None)
+    all_types: list[str] = Field(alias="All types", default=list)
     website: Optional[str] = Field(alias="Website", default=None)
     website_root: Optional[str] = Field(alias="Website (root url)", default=None)
     phone: str = Field(alias="Phone")

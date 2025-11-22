@@ -21,9 +21,11 @@ def _to_restaurant(row: RawRestaurantRow) -> RestaurantRecord:
         rating=row.reviews_rating,
         reviews_count=row.reviews_count,
         google_id=row.google_id,
+        is_closed= row.is_closed,
         phone=row.phone,
         website=(row.website or "").strip() or None,
         main_type=(row.main_type or "").strip() or None,
+        all_types=row.all_types
     )
 
 
