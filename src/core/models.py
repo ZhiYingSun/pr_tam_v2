@@ -83,3 +83,26 @@ class BusinessRecord(BaseModel):
             **kwargs
         )
 
+class MatchResult(BaseModel):
+    restaurant: RestaurantRecord
+    business: Optional[BusinessRecord] = None
+    confidence_score: float
+    match_type: str
+    is_accepted: bool
+
+    name_score: Optional[float] = None
+    postal_code_match: Optional[bool] = None
+    city_match: Optional[bool] = None
+    match_reason: Optional[str] = None
+
+
+class MatchingConfig:
+    # Matching thresholds
+    SCORE_THRESHOLD = 50
+    HIGH_CONFIDENCE_THRESHOLD = 70
+    MEDIUM_CONFIDENCE_THRESHOLD = 50
+    LOW_CONFIDENCE_THRESHOLD = 30
+
+    # Score bonuses
+    POSTAL_CODE_BONUS = 30
+    CITY_MATCH_BONUS = 20
