@@ -1,6 +1,7 @@
-import re
-import logging
+import ast
 import json
+import logging
+import re
 from typing import List, Tuple
 from rapidfuzz import fuzz
 
@@ -45,12 +46,37 @@ class RestaurantMatcher:
 
         return normalized
 
-    def _clean_json_response(self, content: str):
-        json = content.strip()
-        # Remove ```json or ``` at start and ``` at end
-        json = re.sub(r'^```(?:json)?\s*', '', json)
-        json = re.sub(r'\s*```$', '', content)
-        return json.strip()
+    def _clean_json_response(self, content: str) -> str:
+        cleaned = content.strip()
+        cleaned = re.sub(r'^```(?:json)?\s*', '', cleaned)
+        cleaned = re.sub(r'\s*```$', '', cleaned)
+        return cleaned.strip()
+
+    def _parse_openai_matches(
+        self, response_content: str, record_lookup: dict[str, CorporationSearchRecord]
+    ) -> list[CorporationSearchRecord]:
+        cleaned = self._clean_json_response(response_content)
+        parsed = None
+
+        for parser in (json.loads, ast.literal_eval):
+            try:
+                parsed = parser(cleaned)
+                break
+            except (ValueError, SyntaxError, json.JSONDecodeError):
+                continue
+
+        if not isinstance(parsed, dict) or "matches" not in parsed:
+            logger.warning("OpenAI response not in expected format: %s", cleaned[:200])
+            return []
+
+        matches: list[CorporationSearchRecord] = []
+        for legal_name in parsed.get("matches", []):
+            normalized = self._normalize_name(str(legal_name))
+            record = record_lookup.get(normalized)
+            if record:
+                matches.append(record)
+
+        return matches
 
     async def _rank_name_matches_with_llm(self, restaurant_name: str, legal_records: list[CorporationSearchRecord]) -> \
     list[CorporationSearchRecord]:
@@ -89,14 +115,16 @@ Return a JSON object with a "matches" key containing an array of the top 3 candi
             if response and "content" in response:
                 response_content = response["content"]
                 if response_content:
-                    top_matches = self._clean_json_response(response_content)
-                    logger.info(f"OpenAI gave top matches: '{restaurant_name}' → '{top_matches}'")
-                    top_matches = json.loads(top_matches)
-                    top_record = []
-                    for legal_name in top_matches["matches"]:
-                        top_record.append(legal_normalized_name_to_record[legal_name])
-                    logger.info(f"top records: {top_record}'")
-                    return top_record
+                    top_records = self._parse_openai_matches(
+                        response_content, legal_normalized_name_to_record
+                    )
+                    if top_records:
+                        logger.info(
+                            "OpenAI ranked matches for '%s': %s",
+                            restaurant_name,
+                            [record.corpName for record in top_records],
+                        )
+                        return top_records
 
             logger.warning(f"OpenAI returned empty response for '{restaurant_name}' for ranking best matches")
             return []
@@ -151,6 +179,37 @@ Return a JSON object with a "matches" key containing an array of the top 3 candi
             return postal_code_match.group(1)
 
         return ''
+
+    def _extract_city(self, address: str) -> str:
+        if not address:
+            return ''
+
+        parts = [part.strip() for part in address.split(',') if part.strip()]
+        if not parts:
+            return ''
+
+        candidate = parts[-2] if len(parts) >= 2 and parts[-1].isdigit() else parts[-1]
+        candidate = re.sub(r'\d+', '', candidate).strip()
+        return candidate
+
+    def _extract_city(self, address: str) -> str:
+        if not address:
+            return ''
+
+        parts = [part.strip() for part in address.split(',') if part.strip()]
+        if not parts:
+            return ''
+
+        # If last part looks like a ZIP, take the previous token as city
+        last_part = parts[-1]
+        if re.search(r'\d{5}$', last_part) and len(parts) >= 2:
+            candidate = parts[-2]
+        else:
+            candidate = last_part
+
+        # Remove digits or trailing state abbreviations
+        candidate = re.sub(r'\d+', '', candidate).strip()
+        return candidate
 
     async def find_best_match(self, restaurant: RestaurantRecord) -> List[MatchResult]:
         normalized_restaurant_name = self._normalize_name(restaurant.name)

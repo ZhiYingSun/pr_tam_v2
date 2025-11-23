@@ -182,25 +182,26 @@ def export_restaurant_records_to_csv(
 
     output_path = data_dir / filename
 
-    rows = [
-        {
-            "name": record.name,
-            "address": record.address,
-            "city": record.city,
-            "postal_code": record.postal_code,
-            "phone": record.phone,
-            "google_id": record.google_id,
-            "is_closed": record.is_closed,
-            "rating": record.rating,
-            "reviews_count": record.reviews_count,
-            "website": record.website or "",
-            "main_type": record.main_type or "",
-            "all_types": "|".join(record.all_types),
-            "longitude": record.coordinates[0],
-            "latitude": record.coordinates[1],
-        }
-        for record in records
-    ]
+    rows = []
+    for record in records:
+        rows.append(
+            {
+                "Name": record.name,
+                "Full address": record.address,
+                "City": record.city,
+                "State": "Puerto Rico",
+                "Website": record.website or "",
+                "Phone": record.phone,
+                "Reviews rating": record.rating,
+                "Reviews count": record.reviews_count,
+                "Main type": record.main_type or "",
+                "Google ID": record.google_id,
+                "Latitude": record.coordinates[1],
+                "Longitude": record.coordinates[0],
+                "All types": "|".join(record.all_types),
+                "Is closed": record.is_closed,
+            }
+        )
 
     pd.DataFrame(rows).to_csv(output_path, index=False)
     logger.info("Exported %s restaurants to %s", len(records), output_path)

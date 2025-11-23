@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
+from datetime import datetime
 from typing import Tuple, Optional, List, Union
 
 import pandas as pd
@@ -10,11 +10,16 @@ import pandas as pd
 from src.clients.openai_client import OpenAIClient
 from src.clients.zyte_client import ZyteClient
 from src.core.config import load_config
-from src.core.models import RestaurantRecord, MatchResult, GeneratedOutputFiles
+from src.core.models import (
+    GeneratedOutputFiles,
+    MatchResult,
+    MatchingConfig,
+    RestaurantRecord,
+)
 from src.core.validation_models import ValidationResult
 from src.export.report_generator import ReportGenerator, export_restaurant_records_to_csv
 from src.filter.filter import BusinessTypeFilter, InactiveBusinessFilter, apply_all_filters
-from src.loader.csv_loader import load_restaurants_from_csv, stream_restaurants_from_csv
+from src.loader.csv_loader import stream_restaurants_from_csv
 from pathlib import Path
 
 import sys
@@ -25,7 +30,7 @@ from src.searcher.searcher import IncorporationSearcher
 
 logger = logging.getLogger(__name__)
 
-async def main(input_path: str, output_path: str) -> None:
+async def main(input_path: str) -> None:
     input_path = Path(input_path)
     if not input_path.exists():
         logger.error(f"Input file not found: {input_path}")
@@ -47,7 +52,8 @@ async def main(input_path: str, output_path: str) -> None:
     openai_client = OpenAIClient(api_key=openai_api_key)
     zyte_client = ZyteClient(api_key=zyte_api_key)
 
-    start_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    start_time = datetime.now()
+    start_timestamp = start_time.strftime("%Y%m%d_%H%M%S")
 
     records = stream_restaurants_from_csv(input_path)
 
@@ -55,6 +61,10 @@ async def main(input_path: str, output_path: str) -> None:
     inactive_filter = InactiveBusinessFilter()
 
     filtered_restaurants = list(apply_all_filters(records, [business_type_filter, inactive_filter]))
+    if not filtered_restaurants:
+        logger.warning("No restaurants passed the filters; exiting pipeline.")
+        return
+
     filtered_restaurants_csv = export_restaurant_records_to_csv(filtered_restaurants)
 
     searcher = IncorporationSearcher(zyte_client)
@@ -72,6 +82,8 @@ async def main(input_path: str, output_path: str) -> None:
     )
 
     # Generate output files
+    output_path = Path("data/output")
+    output_path.mkdir(parents=True, exist_ok=True)
     output_files = generate_all_outputs(match_results, str(output_path))
 
     if validation_results:
@@ -85,40 +97,58 @@ async def main(input_path: str, output_path: str) -> None:
         report_generator, start_timestamp, validation_file, filtered_restaurants_csv
     )
 
-    duration = datetime.now() - start_timestamp
+    duration = datetime.now() - start_time
     logger.info("PIPELINE COMPLETED")
     logger.info(f"Duration: {duration}")
     logger.info(f"Output File: {final_output}")
 
 
-if __name__ == "__main__":
-    main("data/restaurants.csv", "data/output.csv")
-
 async def match_restaurant_to_legal_entity(
-        self,
-        restaurant: RestaurantRecord,
-        matcher: RestaurantMatcher
+    restaurant: RestaurantRecord,
+    matcher: RestaurantMatcher,
 ) -> Tuple[Optional[MatchResult], Optional[ValidationResult]]:
-    # Step 1: Find top 3 candidate matches
-    match_results = []
+    """Find and return the best incorporation match for a restaurant."""
+
     try:
         match_results = await matcher.find_best_match(restaurant)
-    except Exception as e:
-        logger.error(f"Error matching restaurant '{restaurant.name}': {e}", exc_info=True)
+    except Exception as exc:
+        logger.error(
+            "Error matching restaurant '%s': %s", restaurant.name, exc, exc_info=True
+        )
+        return None, None
 
-    # Step 2: Validate all candidates and select the best one
-    validation_result = None
-    selected_match = None
+    if not match_results:
+        return None, None
 
-    if match_results:
-        try:
-            selected_match, validation_result = await self.validator.validate_best_match_from_candidates(
-                match_results)
-            return selected_match, validation_result
-        except Exception as e:
-            logger.error(f"Error validating matches for '{restaurant.name}': {e}", exc_info=True)
+    best_match = match_results[0]
 
-    return selected_match, validation_result
+    validation_result: Optional[ValidationResult] = None
+    if best_match.business is not None:
+        validation_result = ValidationResult(
+            restaurant_name=restaurant.name,
+            business_legal_name=best_match.business.legal_name,
+            rapidfuzz_confidence_score=best_match.confidence_score,
+            openai_match_score=best_match.confidence_score,
+            openai_confidence=
+                "high" if best_match.confidence_score >= MatchingConfig.HIGH_CONFIDENCE_THRESHOLD
+                else "medium" if best_match.confidence_score >= MatchingConfig.MEDIUM_CONFIDENCE_THRESHOLD
+                else "low",
+            openai_recommendation="accept" if best_match.is_accepted else "manual_review",
+            openai_reasoning=best_match.match_reason or "",
+            final_status="accept" if best_match.is_accepted else "manual_review",
+            restaurant_google_id=restaurant.google_id,
+            restaurant_address=restaurant.address,
+            restaurant_city=restaurant.city,
+            restaurant_postal_code=restaurant.postal_code,
+            restaurant_website=restaurant.website,
+            restaurant_phone=restaurant.phone,
+            restaurant_rating=restaurant.rating,
+            restaurant_reviews_count=restaurant.reviews_count,
+            restaurant_main_type=restaurant.main_type,
+            business_registration_index=best_match.business.registration_index,
+        )
+
+    return best_match, validation_result
 
 def process_restaurant_results(
         restaurant_results: List[Union[Tuple[Optional[MatchResult], Optional[ValidationResult]], Exception]],
@@ -337,3 +367,7 @@ def run_transformation(
         return str(final_output_path)
 
     return None
+
+if __name__ == "__main__":
+    asyncio.run(main(input_path="data/Puerto Rico Data_ v1109_50_without_LLC.csv"))
+

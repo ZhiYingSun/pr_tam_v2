@@ -39,8 +39,10 @@ class InactiveBusinessFilter:
 class BusinessTypeFilter:
     # TODO: could make it more flexible and make the types optional
     def __init__(self, inclusion_types_file: Union[str, Path], exclusion_types_file: Union[str, Path]):
-        inclusion = load_types_from_file(inclusion_types_file)
-        exclusion = load_types_from_file(exclusion_types_file)
+        inclusion_path = Path(inclusion_types_file)
+        exclusion_path = Path(exclusion_types_file)
+        inclusion = load_types_from_file(inclusion_path)
+        exclusion = load_types_from_file(exclusion_path)
         if not inclusion or not exclusion:
             raise ValueError("Both inclusion_types and exclusion_types must be provided")
         self.inclusion_types = inclusion

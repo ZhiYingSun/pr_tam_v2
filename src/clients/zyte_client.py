@@ -1,9 +1,11 @@
-import os
+import asyncio
 import json
 import logging
-from typing import Dict, Any, Optional
+import os
+from typing import Any, Dict, Optional
+
 import aiohttp
-from aiohttp import ClientSession, ClientTimeout, BasicAuth
+from aiohttp import BasicAuth, ClientSession, ClientTimeout
 from aiolimiter import AsyncLimiter
 
 from src.clients.client_protocols import ZyteClientProtocol
@@ -29,6 +31,8 @@ class ZyteClient(ZyteClientProtocol):
 
             self.post_rate_limiter = AsyncLimiter(max_rate=250, time_period=60)
             self.get_rate_limiter = AsyncLimiter(max_rate=250, time_period=60)
+            self.max_retries = 3
+            self.retry_backoff = 2
 
             self.session = None
             self._initialized = True
@@ -88,28 +92,44 @@ class ZyteClient(ZyteClientProtocol):
                     {"name": k, "value": v} for k, v in headers.items()
                 ]
 
-            try:
-                async with self.session.post(
-                        "https://api.zyte.com/v1/extract",
-                        json=payload
-                ) as resp:
-                    if resp.status != 200:
-                        logger.error(f"Zyte API returned status {resp.status}")
-                        raise aiohttp.ClientResponseError(
-                            request_info=resp.request_info,
-                            history=resp.history,
-                            status=resp.status
+            for attempt in range(1, self.max_retries + 1):
+                try:
+                    async with self.session.post(
+                        "https://api.zyte.com/v1/extract", json=payload
+                    ) as resp:
+                        if resp.status != 200:
+                            if resp.status >= 500 and attempt < self.max_retries:
+                                logger.warning(
+                                    "Zyte API returned status %s. Retrying (%s/%s)...",
+                                    resp.status,
+                                    attempt,
+                                    self.max_retries,
+                                )
+                                await asyncio.sleep(self.retry_backoff * attempt)
+                                continue
+                            logger.error(f"Zyte API returned status {resp.status}")
+                            raise aiohttp.ClientResponseError(
+                                request_info=resp.request_info,
+                                history=resp.history,
+                                status=resp.status,
+                            )
+
+                        zyte_data = await resp.json()
+                        zyte_response = ZyteHttpResponse(**zyte_data)
+                        return zyte_response
+
+                except (ValueError, aiohttp.ClientError) as e:
+                    if attempt < self.max_retries:
+                        logger.warning(
+                            "Zyte POST request failed (%s/%s): %s. Retrying...",
+                            attempt,
+                            self.max_retries,
+                            e,
                         )
-
-                    zyte_data = await resp.json()
-
-                    # Parse with Pydantic and decode
-                    zyte_response = ZyteHttpResponse(**zyte_data)
-                    return zyte_response
-
-            except (ValueError, aiohttp.ClientError) as e:
-                logger.error(f"Zyte POST request failed: {e}")
-                raise
+                        await asyncio.sleep(self.retry_backoff * attempt)
+                        continue
+                    logger.error(f"Zyte POST request failed: {e}")
+                    raise
 
     async def get_request(
             self,
@@ -148,25 +168,41 @@ class ZyteClient(ZyteClientProtocol):
                     {"name": k, "value": v} for k, v in headers.items()
                 ]
 
-            try:
-                async with self.session.post(
-                        "https://api.zyte.com/v1/extract",
-                        json=payload
-                ) as resp:
-                    if resp.status != 200:
-                        logger.error(f"Zyte API returned status {resp.status}")
-                        raise aiohttp.ClientResponseError(
-                            request_info=resp.request_info,
-                            history=resp.history,
-                            status=resp.status
+            for attempt in range(1, self.max_retries + 1):
+                try:
+                    async with self.session.post(
+                        "https://api.zyte.com/v1/extract", json=payload
+                    ) as resp:
+                        if resp.status != 200:
+                            if resp.status >= 500 and attempt < self.max_retries:
+                                logger.warning(
+                                    "Zyte API returned status %s. Retrying (%s/%s)...",
+                                    resp.status,
+                                    attempt,
+                                    self.max_retries,
+                                )
+                                await asyncio.sleep(self.retry_backoff * attempt)
+                                continue
+                            logger.error(f"Zyte API returned status {resp.status}")
+                            raise aiohttp.ClientResponseError(
+                                request_info=resp.request_info,
+                                history=resp.history,
+                                status=resp.status,
+                            )
+
+                        zyte_data = await resp.json()
+                        zyte_response = ZyteHttpResponse(**zyte_data)
+                        return zyte_response
+
+                except (ValueError, aiohttp.ClientError) as e:
+                    if attempt < self.max_retries:
+                        logger.warning(
+                            "Zyte GET request failed (%s/%s): %s. Retrying...",
+                            attempt,
+                            self.max_retries,
+                            e,
                         )
-
-                    zyte_data = await resp.json()
-
-                    # Parse with Pydantic and decode
-                    zyte_response = ZyteHttpResponse(**zyte_data)
-                    return zyte_response
-
-            except (ValueError, aiohttp.ClientError) as e:
-                logger.error(f"Zyte GET request failed: {e}")
-                raise
+                        await asyncio.sleep(self.retry_backoff * attempt)
+                        continue
+                    logger.error(f"Zyte GET request failed: {e}")
+                    raise
