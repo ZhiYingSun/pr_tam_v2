@@ -18,9 +18,8 @@ logger = logging.getLogger(__name__)
 class IncorporationSearcher:
     BASE_URL = "https://rceapi.estado.pr.gov/api"
 
-    def __init__(self, zyte_api_key: str = "test_key", zyte_client: Optional[ZyteClientProtocol] = None):
-        self.zyte_api_key = zyte_api_key
-        self.zyte_client = zyte_client if zyte_client is not None else ZyteClient(zyte_api_key)
+    def __init__(self, zyte_client: ZyteClientProtocol):
+        self.zyte_client = zyte_client
         self.search_url = f"{self.BASE_URL}/corporation/search"
 
     def get_detail_url(self, registration_index: str) -> str:

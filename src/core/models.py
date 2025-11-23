@@ -104,5 +104,9 @@ class MatchingConfig:
     LOW_CONFIDENCE_THRESHOLD = 30
 
     # Score bonuses
-    POSTAL_CODE_BONUS = 30
-    CITY_MATCH_BONUS = 20
+    POSTAL_CODE_BONUS = 40
+    CITY_MATCH_BONUS = 30
+
+class GeneratedOutputFiles(BaseModel):
+    matched_csv: str
+    unmatched_csv: str
