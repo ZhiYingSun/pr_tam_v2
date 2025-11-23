@@ -61,3 +61,52 @@ class RawRestaurantRow(BaseModel):
         if isinstance(value, str):
             return [t.strip() for t in value.split(",") if t.strip()]
         return []
+
+class BusinessRecord(BaseModel):
+    legal_name: str
+    registration_number: str
+    registration_index: str
+    status: str
+    # enriched by detail responses
+    business_address: Optional[str] = None
+    resident_agent_name: Optional[str] = None
+    resident_agent_address: Optional[str] = None
+
+    @classmethod
+    def from_corporation(cls, corporation: Optional["CorporationDetail"], **kwargs):
+        return cls(
+            legal_name=corporation.corpName if corporation else '',
+            registration_number=str(
+                corporation.corpRegisterNumber) if corporation and corporation.corpRegisterNumber else '',
+            registration_index=corporation.corpRegisterIndex if corporation else '',
+            status=corporation.statusEn if corporation else '',
+            **kwargs
+        )
+
+class MatchResult(BaseModel):
+    restaurant: RestaurantRecord
+    business: Optional[BusinessRecord] = None
+    confidence_score: float
+    match_type: str
+    is_accepted: bool
+
+    name_score: Optional[float] = None
+    postal_code_match: Optional[bool] = None
+    city_match: Optional[bool] = None
+    match_reason: Optional[str] = None
+
+
+class MatchingConfig:
+    # Matching thresholds
+    SCORE_THRESHOLD = 50
+    HIGH_CONFIDENCE_THRESHOLD = 70
+    MEDIUM_CONFIDENCE_THRESHOLD = 50
+    LOW_CONFIDENCE_THRESHOLD = 30
+
+    # Score bonuses
+    POSTAL_CODE_BONUS = 40
+    CITY_MATCH_BONUS = 30
+
+class GeneratedOutputFiles(BaseModel):
+    matched_csv: str
+    unmatched_csv: str

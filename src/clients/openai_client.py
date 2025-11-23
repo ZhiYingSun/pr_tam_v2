@@ -6,10 +6,12 @@ from aiolimiter import AsyncLimiter
 from openai import AsyncOpenAI
 from openai import APIStatusError
 
+from src.clients.client_protocols import OpenAIClientProtocol
+
 logger = logging.getLogger(__name__)
 
 
-class OpenAIClient:
+class OpenAIClient(OpenAIClientProtocol):
     _instance = None
     _initialized = False
 
