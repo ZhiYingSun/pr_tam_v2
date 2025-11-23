@@ -6,12 +6,13 @@ import aiohttp
 from aiohttp import ClientSession, ClientTimeout, BasicAuth
 from aiolimiter import AsyncLimiter
 
-from src.core.api_model import ZyteHttpResponse
+from src.clients.client_protocols import ZyteClientProtocol
+from src.core.api_models import ZyteHttpResponse
 
 logger = logging.getLogger(__name__)
 
 
-class ZyteClient:
+class ZyteClient(ZyteClientProtocol):
     _instance = None
     _initialized = False
 

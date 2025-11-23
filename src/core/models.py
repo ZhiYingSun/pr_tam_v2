@@ -61,3 +61,25 @@ class RawRestaurantRow(BaseModel):
         if isinstance(value, str):
             return [t.strip() for t in value.split(",") if t.strip()]
         return []
+
+class BusinessRecord(BaseModel):
+    legal_name: str
+    registration_number: str
+    registration_index: str
+    status: str
+    # enriched by detail responses
+    business_address: Optional[str] = None
+    resident_agent_name: Optional[str] = None
+    resident_agent_address: Optional[str] = None
+
+    @classmethod
+    def from_corporation(cls, corporation: Optional["CorporationDetail"], **kwargs):
+        return cls(
+            legal_name=corporation.corpName if corporation else '',
+            registration_number=str(
+                corporation.corpRegisterNumber) if corporation and corporation.corpRegisterNumber else '',
+            registration_index=corporation.corpRegisterIndex if corporation else '',
+            status=corporation.statusEn if corporation else '',
+            **kwargs
+        )
+

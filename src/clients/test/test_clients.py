@@ -7,7 +7,7 @@ import json
 import pytest
 
 from src.clients.mock_clients import MockOpenAIClient, MockZyteClient
-from src.core.api_model import ZyteHttpResponse
+from src.core.api_models import ZyteHttpResponse
 
 
 def _run(coro):
